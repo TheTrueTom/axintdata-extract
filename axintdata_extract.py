@@ -11,7 +11,7 @@
 
 import os, datetime, re, csv, time
 
-AXINT_DATA_ORIGIN = "AXINTDATA"
+AXINT_DATA_ORIGIN = "AXINTDATA/set calibration PC DRN"
 EXTRACT_LIST = 'extractlist.txt'
 
 OUTPUT_FOLDER = "AXINTDATA_TREATED"
@@ -132,7 +132,7 @@ def output_CSV(path, datalist, sort):
 		header_list = ['Chan']
 
 		for data in new_datalist:
-			header_list.append(data.date.strftime("%d-%m-%Y_%Hh") if sort == 'date' else data.probe + "_" + data.sensor)
+			header_list.append(data.date.strftime("%d-%m-%Y_%Hh") if sort == 'sensor' else data.probe + "_" + data.sensor)
 
 		out.writerow(header_list)
 
@@ -154,6 +154,6 @@ if __name__ == '__main__':
 	clean_data = clean_data(data)
 	print("Nettoyage des données -> OK")
 
-	#output_CSV(OUTPUT_FOLDER, clean_data, 'date')
+	output_CSV(OUTPUT_FOLDER, clean_data, 'date')
 	output_CSV(OUTPUT_FOLDER, clean_data, 'sensor')
 	print("Impression CSV -> OK")
