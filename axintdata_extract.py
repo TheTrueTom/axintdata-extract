@@ -47,7 +47,9 @@ def extract_data_from_file(path, file, date):
 	probe = re.findall(r'DRN[0-9]{4}', file)[0]
 	sensor = re.findall(r'DRN[0-9]{4}_[0-9]{2}', file)[0][-2:]
 
-	return SensorData(date, values, probe, sensor)
+	data = SensorData(date, values, probe, sensor)
+
+	return data
 
 def extract_extract_list(path):
 	extract_list = []
@@ -78,7 +80,6 @@ def extract_data_from_date_list(extract_list, root_folder):
 def extract_all_for_date(origin, folder_list, date):
 	date_to_extract = date.strftime('%m-%d-%y_%Hh')
 	pattern = r'%s_DRN[0-9]{4}_[0-9]{2}' % date_to_extract
-
 	all_sensor_data = []
 
 	for folder in folder_list:
@@ -108,62 +109,40 @@ def clean_data(datalist):
 	return clean_datalist
 
 def output_CSV(path, datalist, sort):
-	if sort == 'date':
-		date_set = set()
+	sort_set = set()
 
-		for data in datalist:
-			date_set.add(data.date)
+	for data in datalist:
+		sort_set.add(data.date if sort == 'date' else (data.probe + '_' + data.sensor))
 
-		for date in date_set:
-			new_datalist = [x for x in datalist if x.date == date]
-			
-			filename = date.strftime("%d-%m-%Y_%Hh.csv")
+	for sort_element in sort_set:
+		new_datalist = []
 
-			file = open(os.path.join(path, filename), 'w')
-			out = csv.writer(file, lineterminator='\n', delimiter=',', quotechar="\"", quoting=csv.QUOTE_ALL)
+		if sort == 'date':
+			new_datalist = [x for x in datalist if x.date == sort_element]
+		else:
+			new_datalist = [x for x in datalist if (x.probe + '_' + x.sensor) == sort_element]
 
-			sensor_probe_list = ['Chan']
+		if not os.path.exists(path):
+			os.makedirs(path)
 
-			for data in new_datalist:
-				sensor_probe_list.append("Value " + data.probe + "_" + data.sensor)
+		filename = sort_element.strftime("%d-%m-%Y_%Hh.csv") if sort == 'date' else sort_element + '.csv'
+		file = open(os.path.join(path, filename), 'w')
+		out = csv.writer(file, lineterminator='\n', delimiter=',', quotechar="\"", quoting=csv.QUOTE_ALL)
 
-			out.writerow(sensor_probe_list)
+		header_list = ['Chan']
 
-			for i in range(0,4096):
-				row = [i]
+		for data in new_datalist:
+			header_list.append(data.date.strftime("%d-%m-%Y_%Hh") if sort == 'date' else data.probe + "_" + data.sensor)
 
-				for data in new_datalist:
-					row.append(data.value[i])
+		out.writerow(header_list)
 
-				out.writerow(row)
-	else:
-		detector_set = set()
-
-		for data in datalist:
-			detector_set.add(data.probe + '_' + data.sensor)
-
-		for detector in detector_set:
-			new_datalist = [x for x in datalist if x.probe + '_' + x.sensor == detector]
-			
-			filename = data.probe + '_' + data.sensor + '.csv'
-
-			file = open(os.path.join(path, filename), 'w')
-			out = csv.writer(file, lineterminator='\n', delimiter=',', quotechar="\"", quoting=csv.QUOTE_ALL)
-
-			sensor_probe_list = ['Chan']
+		for i in range(0,4096):
+			row = [i]
 
 			for data in new_datalist:
-				sensor_probe_list.append(data.date.strftime("%d-%m-%Y_%Hh"))
+				row.append(data.value[i])
 
-			out.writerow(sensor_probe_list)
-
-			for i in range(0,4096):
-				row = [i]
-
-				for data in new_datalist:
-					row.append(data.value[i])
-
-				out.writerow(row)
+			out.writerow(row)
 
 if __name__ == '__main__':
 	extract_list = extract_extract_list(EXTRACT_LIST)
