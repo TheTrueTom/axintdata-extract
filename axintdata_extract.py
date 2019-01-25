@@ -11,7 +11,7 @@
 
 import os, datetime, re, csv, time
 
-AXINT_DATA_ORIGIN = "AXINTDATA/set calibration PC DRN"
+AXINT_DATA_ORIGIN = "AXINTDATA/AXINTDATA24012019"
 EXTRACT_LIST = 'extractlist.txt'
 
 OUTPUT_FOLDER = "AXINTDATA_TREATED"
@@ -26,6 +26,15 @@ class SensorData:
 		self.value = value
 		self.probe = probe
 		self.sensor = sensor
+
+	def integrated_signal(self, start, end):
+		value = 0
+
+		for i in range (start, end):
+			value += self.value[i]
+
+		return value
+
 
 def extract_data_from_file(path, file, date):
 	values = {}
@@ -108,7 +117,7 @@ def clean_data(datalist):
 
 	return clean_datalist
 
-def output_CSV(path, datalist, sort):
+def output_CSV(path, datalist, sort, integration_start, integration_end):
 	sort_set = set()
 
 	for data in datalist:
@@ -126,15 +135,21 @@ def output_CSV(path, datalist, sort):
 			os.makedirs(path)
 
 		filename = sort_element.strftime("%d-%m-%Y_%Hh.csv") if sort == 'date' else sort_element + '.csv'
+		integrated_filename = filename[:-4] + '_integrated.csv'
+
 		file = open(os.path.join(path, filename), 'w')
+		integrated_file = open(os.path.join(path, integrated_filename), 'w')
+
 		out = csv.writer(file, lineterminator='\n', delimiter=',', quotechar="\"", quoting=csv.QUOTE_ALL)
+		integrated_out = csv.writer(integrated_file, lineterminator='\n', delimiter=',', quotechar="\"", quoting=csv.QUOTE_ALL)
 
 		header_list = ['Chan']
 
 		for data in new_datalist:
-			header_list.append(data.date.strftime("%d-%m-%Y_%Hh") if sort == 'sensor' else data.probe + "_" + data.sensor)
+			header_list.append(data.probe + "_" + data.sensor if sort == 'date' else data.date.strftime("%d-%m-%Y_%Hh"))
 
 		out.writerow(header_list)
+		integrated_out.writerow(header_list)
 
 		for i in range(0,4096):
 			row = [i]
@@ -143,6 +158,12 @@ def output_CSV(path, datalist, sort):
 				row.append(data.value[i])
 
 			out.writerow(row)
+
+		row = [' ']
+		for data in new_datalist:
+			row.append(data.integrated_signal(integration_start, integration_end))
+
+		integrated_out.writerow(row)
 
 if __name__ == '__main__':
 	extract_list = extract_extract_list(EXTRACT_LIST)
@@ -154,6 +175,6 @@ if __name__ == '__main__':
 	clean_data = clean_data(data)
 	print("Nettoyage des données -> OK")
 
-	output_CSV(OUTPUT_FOLDER, clean_data, 'date')
-	output_CSV(OUTPUT_FOLDER, clean_data, 'sensor')
+	output_CSV(OUTPUT_FOLDER, clean_data, 'date', 1200, 1800)
+	output_CSV(OUTPUT_FOLDER, clean_data, 'sensor', 1200, 1800)
 	print("Impression CSV -> OK")
