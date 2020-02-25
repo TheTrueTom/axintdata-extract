@@ -5,6 +5,10 @@
     AXINTDATA LIMITED SET EXTRACT TOOL
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Tool to gather some AXINTDATA in a specified folder
+    This version has been modified to proceed extraction on UNCOMPLETE files
+    List of modifications : 
+    Comment lines 99 100 101 / 115 117 118
+    Correction line 157 : len(data.value.keys()) to replace the constant value 4096. 
     :copyright: 2018 - GLINCS-AXINT, see AUTHORS for more details
     :license: Proprietary and confidential, see LICENSE for more details
 """
@@ -94,10 +98,11 @@ def extract_all_for_date(origin, folder_list, date):
 	for folder in folder_list:
 		for file in os.listdir(os.path.join(origin, folder)):
 			if re.match(pattern, file):
-				if len(list(open(os.path.join(origin, folder, file)))) == 16392: # 16392 = nombre de lignes d'un fichier avec 4 histogrammes complets
+				if len(list(open(os.path.join(origin, folder, file)))) == 16392: # = attention nombre de lignes d'un fichier de 495Ko : 8137
 					all_sensor_data.append(extract_data_from_file(os.path.join(origin, folder, file), file, date))
 				else:
-					print("ERROR :: File " + file + " is incomplete")
+#					print("ERROR :: File " + file + " is incomplete")
+					all_sensor_data.append(extract_data_from_file(os.path.join(origin, folder, file), file, date))
 
 	if len(all_sensor_data) != 0:
 		print("Extraction " + date_to_extract + " -> OK ")
@@ -113,7 +118,8 @@ def clean_data(datalist):
 		if len(data.value.keys()) == 4096:
 			clean_datalist.append(data)
 		else:
-			print("Error :: Data from " + data.probe + "_" + data.sensor + " for date " + data.date.strftime("%d-%m-%Y_%Hh") + " is corrupted")
+			clean_datalist.append(data)
+#			print("Error :: Data from " + data.probe + "_" + data.sensor + " for date " + data.date.strftime("%d-%m-%Y_%Hh") + " is corrupted")
 
 	return clean_datalist
 
@@ -151,19 +157,14 @@ def output_CSV(path, datalist, sort, integration_start, integration_end):
 		out.writerow(header_list)
 		integrated_out.writerow(header_list)
 
-		for i in range(0,4096):
+#		for i in range(1,len(data.value.keys()), 2):
+		for i in range(1,4096, 2):			
 			row = [i]
-
 			for data in new_datalist:
 				row.append(data.value[i])
 
+
 			out.writerow(row)
-
-		row = [' ']
-		for data in new_datalist:
-			row.append(data.integrated_signal(integration_start, integration_end))
-
-		integrated_out.writerow(row)
 
 if __name__ == '__main__':
 	extract_list = extract_extract_list(EXTRACT_LIST)
